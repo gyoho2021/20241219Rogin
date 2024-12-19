@@ -1,0 +1,12 @@
+# Node.js関連
+node_modules/
+npm-debug.log
+
+# 環境変数
+.env
+
+# OS・エディタ関連
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
