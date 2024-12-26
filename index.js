@@ -1,15 +1,12 @@
 require('dotenv').config();
 require('dotenv').config();
 const bcrypt = require('bcrypt');
-
-
+const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const mongoose = require('mongoose');
 const User = require('./models/User.js'); // 作成したユーザーモデルをインポート
-
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -23,66 +20,51 @@ app.use(session({
   saveUninitialized: true,
 }));
 
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
 // ルート
 app.get('/', (req, res) => {
-  res.send('ログイン機能へようこそ！');
+  res.redirect('/login'); // ログインページにリダイレクト
 });
 // ユーザー登録画面
-app.get('/register', redirectIfLoggedIn, (req, res) => {
-  res.send(`
-    <form method="POST" action="/register">
-      <label>Username: <input type="text" name="username" /></label>
-      <label>Password: <input type="password" name="password" /></label>
-      <button type="submit">Register</button>
-    </form>
-  `);
+app.get('/register', (req, res) => {
+  const errorMessage = req.query.error; // クエリパラメータからエラーメッセージを取得
+  res.render('register', { errorMessage });
 });
 
-// ユーザー登録処理
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const user = new User({ username, password });
-    await user.save();
-    res.send('ユーザー登録が完了しました！');
+      const user = new User({ username, password });
+      await user.save();
+      res.redirect('/login');
   } catch (err) {
-    if (err.code === 11000) {
-      // 一意性制約違反（ユーザー名の重複）
-      return res.status(400).send('登録に失敗しました: そのユーザー名は既に使われています。');
-    }
-    // その他のエラー
-    res.status(500).send('登録に失敗しました: ' + err.message);
+      if (err.code === 11000) {
+          // ユーザー名の重複エラー
+          return res.redirect('/register?error=そのユーザー名は既に使われています。');
+      }
+      // その他のエラー
+      console.error(err);
+      res.status(500).send('登録に失敗しました: ' + err.message);
   }
 });
 
 
+app.get('/login',redirectIfLoggedIn, (req, res) => {
+  if (req.session.userId) {
+      // 既にログインしている場合はダッシュボードへリダイレクト
+      return res.redirect('/dashboard');
+  }
 
-app.get('/login', redirectIfLoggedIn, (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login</title>
-        <link rel="stylesheet" href="/css/styles.css">
-    </head>
-    <body>
-        <div class="container">
-            <h1>ログイン</h1>
-            <form method="POST" action="/login">
-                <label for="username">ユーザー名</label>
-                <input type="text" id="username" name="username" required>
-                <label for="password">パスワード</label>
-                <input type="password" id="password" name="password" required>
-                <button type="submit">ログイン</button>
-            </form>
-            <p><a href="/register">新規登録はこちら</a></p>
-        </div>
-    </body>
-    </html>
-  `);
+  // クエリパラメータでエラーメッセージを受け取る
+  const errorMessage = req.query.error;
+
+  // ログイン画面を表示
+  res.render('login', { errorMessage });
 });
+
+
 
 app.get('/check-username', async (req, res) => {
   const { username } = req.query; // クエリパラメータからユーザー名を取得
@@ -97,44 +79,39 @@ app.get('/check-username', async (req, res) => {
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const user = await User.findOne({ username });
+      const user = await User.findOne({ username });
 
-    if (!user) {
-      // ユーザーが見つからない場合
-      return res.status(400).send('ログイン失敗：ユーザー名またはパスワードが正しくありません。');
-    }
+      if (!user) {
+          return res.status(400).send('ログイン失敗：ユーザー名またはパスワードが正しくありません。');
+      }
 
-    // パスワードの比較
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+      const isPasswordValid = await bcrypt.compare(password, user.password);
 
-    if (!isPasswordValid) {
-      // パスワードが一致しない場合
-      return res.status(400).send('ログイン失敗：ユーザー名またはパスワードが正しくありません。');
-    }
+      if (!isPasswordValid) {
+          return res.status(400).send('ログイン失敗：ユーザー名またはパスワードが正しくありません。');
+      }
 
-    // ログイン成功
-    req.session.userId = user._id;
-    return res.redirect('/dashboard');
+      // ユーザーIDとユーザー名をセッションに保存
+      req.session.userId = user._id;
+      req.session.username = user.username;
+
+      return res.redirect('/dashboard');
   } catch (err) {
-    console.error(err);
-    return res.status(500).send('サーバーエラーが発生しました。');
+      console.error(err);
+      return res.status(500).send('サーバーエラーが発生しました。');
   }
 });
 
 // ダッシュボード（ログイン必須）
 app.get('/dashboard', (req, res) => {
   if (!req.session.userId) {
-    // ログインしていない場合はログインページへリダイレクト
-    return res.redirect('/login');
+      return res.redirect('/login'); // ログインしていない場合はログインページへリダイレクト
   }
 
-  // ダッシュボードページを表示
-  res.send(`
-    <h1>ダッシュボード</h1>
-    <p>ようこそ！ログインしています。</p>
-    <a href="/logout">ログアウト</a>
-  `);
+  // ユーザー名をテンプレートに渡す
+  res.render('dashboard', { username: req.session.username });
 });
+
 
 function redirectIfLoggedIn(req, res, next) {
   if (req.session.userId) {
@@ -164,6 +141,16 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
   });
 });
+
+app.get('/profile', (req, res) => {
+  if (!req.session.userId) {
+      return res.redirect('/login'); // ログインしていない場合はログインページにリダイレクト
+  }
+
+  // プロフィールページを表示
+  res.render('profile');
+});
+
 
 // MongoDB接続
 mongoose.connect(process.env.MONGO_URI)

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新規登録</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <%- include('header.ejs') %>
+
+    <div class="container">
+        <h1>新規登録</h1>
+
+        <!-- エラーメッセージ -->
+        <% if (errorMessage) { %>
+        <div class="error-message">
+            <i class="fas fa-exclamation-circle"></i> <%= errorMessage %>
+        </div>
+        <% } %>
+
+        <form method="POST" action="/register">
+            <label for="username">ユーザー名</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">パスワード</label>
+            <input type="password" id="password" name="password" required>
+            <button type="submit">登録</button>
+        </form>
+        <p><a href="/login">ログインはこちら</a></p>
+    </div>
+</body>
+</html>

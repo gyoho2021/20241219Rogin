@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プロフィール</title>
+    <link rel="stylesheet" href="/css/styles.css"> <!-- CSSファイルへの正しいパス -->
+</head>
+<body>
+    <%- include('header.ejs') %>
+    <div class="profile-container">
+        <div class="profile-card">
+            <div class="profile-image">
+                <img src="/images/default-profile.png" alt="プロフィール画像">
+            </div>
+            <div class="profile-details">
+                <h2 class="profile-name">山田 太郎</h2>
+                <p class="profile-email">Email: taro.yamada@example.com</p>
+                <p class="profile-bio">こんにちは！私は北海道で暮らすソフトウェアエンジニアです。趣味はスノーボードと写真撮影です。</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
